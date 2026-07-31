@@ -5,7 +5,7 @@
 # main push -> JAR 로 빌드 -> EC2 로 전송 -> JAR 파일 실행
 
 # yaml 형식은 키 : 밸류 형식으로 적되, 
-#  "  " (공백문자 두개 간격으로 들여쓰기) 로 계층적 구조를 표현할 수 있다.
+# "  " (공백문자 두개 간격으로 들여쓰기) 로 계층적 구조를 표현할 수 있다.
 
 # ---------------------------------------------------------------
 
@@ -40,10 +40,10 @@ jobs:
 
       # 3단계 : Maven 을 이용해서 WAR 파일 만들기 (빌드)
       # 기존에 우리가 직접 [프로젝트명우클릭] - [Run As] - [Maven Install] 선택한 작업
-      # (참고로 JAR 로 빌드하기 위해 아무 설정도 안넣어줬었음 - 기본설정)
+      # (참고로 JAR 로 빌드하기 위해 아무 설정도 안넣어줬었음 - 기본 설정)
       - name: Build JAR with Maven              # 이 단계에 대한 설명
         run: mvn clean package -DskipTests      # 터미널 명령어를 직접 써서 실행하겠다.
-        # clean : 이전 빌드 찌꺼지 삭제
+        # clean : 이전 빌드 찌꺼기 삭제
         # package : 빌드해서 JAR 파일을 만들겠다. (만들어진 JAR 파일은 target 폴더 안에 있음)
         # -DskipTest : 테스트를 건너뛰겠다. (Maven 이 빌드 전 테스트하는것을 하지 않겠다)
         #              혹시라도 테스트가 실패되면 자동 배포가 멈추는것을 방지하기 위해
@@ -60,11 +60,11 @@ jobs:
           source: "target/*.jar"                # 전송할 파일명 (위에서 빌드한 target 폳더의 JAR 파일)
           target: "/home/ubuntu/upload"         # EC2 안에서 이 파일을 전달받을 위치 ()
           strip_components: 1                   # 경로에서 바로 위의 폴더 1개를 빠져나오겠다.
-                                                # 즉, /home/ubuntu/upload/target/xxx.jar 로
-                                                #     /home/ubuntu/upload/xxx.jar
+                                                # 즉, /home/ubuntu/upload/target/xxx.jar 에서
+                                                #     /home/ubuntu/upload/xxx.jar 로
           # ${{ secrets.settings에서저장한변수명 }}
 
-      # 5단계 : EC2 에 접속 (ssh) 해서 JAR 를 Tomcat 에 넣고 재구동
+      # 5단계 : EC2 에 접속 (ssh) 해서 JAR 구동
       - name: Deploy                            # 이 단계에 대한 설명
         uses: appleboy/ssh-action@v1.0.3        # ssh (원격 접속) 를 해주는 명령문
         with:                                   # with 에 이 action (명령문) 에 넘길 옵션들을 적는다
