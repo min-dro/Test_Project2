@@ -84,11 +84,11 @@ jobs:
             rm -f /home/ubuntu/upload/*.jar
 
             # 4_1) 기존에 돌던 jar 를 종료 (포트번호 중복을 피하기 위함)
-            sudo pkill -f 'java -jar' || true
+            sudo pkill -f 'java -jar'
             sleep 3 # 3초 대기 (완전히 꺼질때 까지 대기)
 
             # 4_2) jar 를 재시작 (백그라운드로)
-            sudo setsid nohup java -jar myapp.jar cd /home/ubuntu/app/myapp.jar > log.txt 2>&1 < /dev/null &
+            nohup java -jar myapp.jar cd /home/ubuntu/app/myapp.jar > log.txt 2>&1 < &
 
             # 5) 배포 완료임을 알려주는 메세지 출력 (옵션)
             echo "WAR 배포 완료 -> http://<EC2주소>:8006/myapp"
