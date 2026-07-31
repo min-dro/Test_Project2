@@ -77,6 +77,7 @@ jobs:
             mv /home/ubuntu/upload/*.war /home/ubuntu/upload/myapp.jar
 
             # 2) myapp.jar 를 실행용 폴더로 이동 (내가 편한 경로로 만들기)
+            mkdir -p /home/ubuntu/app
             sudo cp /home/ubuntu/upload/myapp.jar /home/ubuntu/app/myapp.jar
             
             # 3) 기존 upload 폴더에 남아있는 jar 는 삭제 (다음 배포 때 안쌓이게 하려고)
