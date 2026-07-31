@@ -1,0 +1,93 @@
+# yaml 파일의 주석
+# Test_Project2 을 GitHub Actions 을 이용해서 CI/CD 해보기
+
+# Workflow 의 흐름
+# main push -> JAR 로 빌드 -> EC2 로 전송 -> JAR 파일 실행
+
+# yaml 형식은 키 : 밸류 형식으로 적되, 
+#  "  " (공백문자 두개 간격으로 들여쓰기) 로 계층적 구조를 표현할 수 있다.
+
+# ---------------------------------------------------------------
+
+# 이 Workflow 의 이름 설정 (Action 탭에 보여질 이름)
+name: Deploy JAR
+
+# 이 Workflow 를 언제 실행할건지 조건 설정
+on: 
+  push:                   # push (코드 업로드) 가 일어났을 때
+    branches: [ main ]    # main branch 의 코드를 CI/CD 로 올리겠다. (Workflow 를 수행하겠다)
+
+# Workflow 에서 순차적으로 실행할 작업을 정의
+jobs:
+  deploy:                     # 작업명 (아무거나 편한 이름 붙여주기)
+    runs-on: ubuntu-latest    # 이 작업을 수행할 컴퓨터를 지정
+                              # EC2 가 아니라 github 에서 빌려주는 컴퓨터 (jenkins 서버 역할)
+                              # 빌드 작업용 컴퓨터를 빌려온 것!! (JAR 파일만 뽑아주고 끝)
+
+    steps:                    # 실제 작업 순서대로 위에서부터 아래로 차례대로 적겠다.
+      
+      # 1단계 : 레포지토리에 저장된 내 소스코드를 위에서 정의한 빌드 작업용 컴퓨터로 내보내기
+      - name: Checkout                # 이 단계에 대한 설명
+        uses: actions/checkout@v4     # checkout 액션 : 내 레포 코드를 내보내는 명령문
+
+      # 2단계 : 빌드 작업용 컴퓨터에 JDK21 을 설치 (빌드하려면 JDK 가 필요함)
+      - name: Set up JDK 21           # 이 단계에 대한 설명
+        uses: actions/setup-java@v4   # setup-java 액션 : JDK 를 설치해주는 명령문
+        with:                         # with 에 이 action (명령문) 에 넘길 옵션들을 적는다.
+          java-version: '21'          # 21버전을 쓰겠다. (개발 버전이랑 맞춰줘야함)
+          distribution: 'temurin'     # 자바 배포판의 종류를 지정 (temurin 이 제일 무난함)
+          cache: maven                # Maven 의 캐시메모리를 쓰겠다. (다음 빌드부터는 빨라짐)
+
+      # 3단계 : Maven 을 이용해서 WAR 파일 만들기 (빌드)
+      # 기존에 우리가 직접 [프로젝트명우클릭] - [Run As] - [Maven Install] 선택한 작업
+      # (참고로 JAR 로 빌드하기 위해 아무 설정도 안넣어줬었음 - 기본설정)
+      - name: Build JAR with Maven              # 이 단계에 대한 설명
+        run: mvn clean package -DskipTests      # 터미널 명령어를 직접 써서 실행하겠다.
+        # clean : 이전 빌드 찌꺼지 삭제
+        # package : 빌드해서 JAR 파일을 만들겠다. (만들어진 JAR 파일은 target 폴더 안에 있음)
+        # -DskipTest : 테스트를 건너뛰겠다. (Maven 이 빌드 전 테스트하는것을 하지 않겠다)
+        #              혹시라도 테스트가 실패되면 자동 배포가 멈추는것을 방지하기 위해
+
+      # ----- 여기까지가 CI, 아래부터는 CD -----
+
+      # 4단계 : 만들어진 JAR 파일을 EC2 서버로 전송 (scp 명령문을 이용했었음)
+      - name: Copy WAR to EC2                   # 이 단계에 대한 설명
+        uses: appleboy/scp-action@v0.1.7        # scp (파일 전송) 를 해주는 명령문
+        with:                                   # with 에 이 action (명령문) 에 넘길 옵션들을 적는다.
+          host: ${{ secrets.EC2_HOST }}         # 어디로 파일을 전송할건지 (EC2 주소)
+          username: ubuntu                      # EC2 접속 계정 (ubuntu 운영체제의 기본값)
+          key: ${{ secrets.EC2_KEY }}           # 접속용 .pem 파일 내용
+          source: "target/*.jar"                # 전송할 파일명 (위에서 빌드한 target 폳더의 JAR 파일)
+          target: "/home/ubuntu/upload"         # EC2 안에서 이 파일을 전달받을 위치 ()
+          strip_components: 1                   # 경로에서 바로 위의 폴더 1개를 빠져나오겠다.
+                                                # 즉, /home/ubuntu/upload/target/xxx.jar 로
+                                                #     /home/ubuntu/upload/xxx.jar
+          # ${{ secrets.settings에서저장한변수명 }}
+
+      # 5단계 : EC2 에 접속 (ssh) 해서 JAR 를 Tomcat 에 넣고 재구동
+      - name: Deploy                            # 이 단계에 대한 설명
+        uses: appleboy/ssh-action@v1.0.3        # ssh (원격 접속) 를 해주는 명령문
+        with:                                   # with 에 이 action (명령문) 에 넘길 옵션들을 적는다
+          host: ${{ secrets.EC2_HOST }}         # 어디로 접속할건지 (EC2 주소)
+          username: ubuntu                      # 어느 계정으로 접속할건지
+          key : ${{ secrets.EC2_KEY }}          # 접속용 .pem 파일 내용
+          # -- 여기까지가 EC2 에 접속 (ssh), 아래부터는 WAR 를 Tomcat 에 넣고 재구동 ---
+          script: |                             # 아래의 명령문들을 EC2 리눅스 서버에서 순차적으로 실행
+            # 1) /home/ubuntu/upload/xxx.jar 파일을 myapp.jar 로 이름 변경
+            mv /home/ubuntu/upload/*.war /home/ubuntu/upload/myapp.jar
+
+            # 2) myapp.jar 를 실행용 폴더로 이동 (내가 편한 경로로 만들기)
+            sudo cp /home/ubuntu/upload/myapp.jar /home/ubuntu/app/myapp.jar
+            
+            # 3) 기존 upload 폴더에 남아있는 jar 는 삭제 (다음 배포 때 안쌓이게 하려고)
+            rm -f /home/ubuntu/upload/*.jar
+
+            # 4_1) 기존에 돌던 jar 를 종료 (포트번호 중복을 피하기 위함)
+            sudo pkill -f 'java -jar' || true
+            sleep 3 # 3초 대기 (완정히 꺼질때 까지 대기)
+
+            # 4_2) jar 를 재시작 (백그라운드로)
+            sudo nohup java -jar myapp.jar cd /home/ubuntu/app/myapp.jar > log.txt 2>&1 &
+
+            # 5) 배포 완료임을 알려주는 메세지 출력 (옵션)
+            echo "WAR 배포 완료 -> http://<EC2주소>:8006/myapp"
