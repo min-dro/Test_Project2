@@ -83,12 +83,22 @@ jobs:
             # 3) 기존 upload 폴더에 남아있는 jar 는 삭제 (다음 배포 때 안쌓이게 하려고)
             rm -f /home/ubuntu/upload/*.jar
 
+            # 4_1) 기존에 돌던 jar 를 종료 (포트번호 중북을 피하기 위함) - 기존에 돌아가던 jar 파일이 있을 경우에만 kill
+            if [ -f myapp.pid ]; then
+              kill "$(cat myapp.pid)" 2>/dev/null || true
+              sleep 3
+            fi
+
+            # 4_2) jar 재시작 - 새 창에서 시작 (setsid)
+            setsid nohup java -jar /home/ubuntu/app/myapp.jar > log.txt 2>&1 < /dev/null &
+
+            # 기존 스크립트는 주석
             # 4_1) 기존에 돌던 jar 를 종료 (포트번호 중복을 피하기 위함)
-            pkill -f 'java -jar'
-            sleep 3 # 3초 대기 (완전히 꺼질때 까지 대기)
+            # pkill -f 'java -jar'
+            # sleep 3 # 3초 대기 (완전히 꺼질때 까지 대기)
 
             # 4_2) jar 를 재시작 (백그라운드로)
-            nohup java -jar myapp.jar cd /home/ubuntu/app/myapp.jar > log.txt 2>&1 < &
+            # nohup java -jar /home/ubuntu/app/myapp.jar > log.txt 2>&1 &
 
             # 5) 배포 완료임을 알려주는 메세지 출력 (옵션)
             echo "WAR 배포 완료 -> http://<EC2주소>:8006/myapp"
