@@ -78,13 +78,13 @@ jobs:
 
             # 2) myapp.jar 를 실행용 폴더로 이동 (내가 편한 경로로 만들기)
             mkdir -p /home/ubuntu/app
-            sudo cp /home/ubuntu/upload/myapp.jar /home/ubuntu/app/myapp.jar
+            cp /home/ubuntu/upload/myapp.jar /home/ubuntu/app/myapp.jar
             
             # 3) 기존 upload 폴더에 남아있는 jar 는 삭제 (다음 배포 때 안쌓이게 하려고)
             rm -f /home/ubuntu/upload/*.jar
 
             # 4_1) 기존에 돌던 jar 를 종료 (포트번호 중복을 피하기 위함)
-            sudo pkill -f 'java -jar'
+            pkill -f 'java -jar'
             sleep 3 # 3초 대기 (완전히 꺼질때 까지 대기)
 
             # 4_2) jar 를 재시작 (백그라운드로)
